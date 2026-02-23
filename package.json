@@ -1,0 +1,17 @@
+{
+  "name": "bigly-nickname-generator",
+  "version": "1.0.0",
+  "main": "app.js",
+  "scripts": {
+    "start": "python3 -m http.server 4173",
+    "check": "node --check app.js"
+  },
+  "keywords": [
+    "nickname",
+    "generator",
+    "satire"
+  ],
+  "author": "",
+  "license": "ISC",
+  "description": "Trump-style satire nickname generator"
+}
