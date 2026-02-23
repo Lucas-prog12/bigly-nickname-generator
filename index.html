@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Bigly Nickname Lab</title>
+  <title>Bigly Nickname Lab v2</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet" />
@@ -12,75 +12,172 @@
 <body>
   <main class="page-wrap">
     <section class="hero-card">
-      <p class="eyebrow">Campaign Lab // 2026 Edition</p>
+      <p class="eyebrow">Campaign Lab // v2</p>
       <h1>Bigly Nickname Generator</h1>
       <p class="subtitle">
-        Donne ton prénom, ton handle et un peu de contexte. L'algorithme fabrique des surnoms satiriques
-        "style rally" avec allitérations et punchlines.
+        Version enrichie: quiz de personnalité + signaux sociaux + option LLM.
+        Le but est d'obtenir des nicknames qui collent beaucoup plus à la personne.
       </p>
       <div class="hero-badges">
         <span>Satire</span>
-        <span>Personnalisé</span>
-        <span>Partageable</span>
+        <span>Quiz</span>
+        <span>LLM Optionnel</span>
       </div>
     </section>
 
     <section class="panel-grid">
       <article class="panel input-panel">
-        <h2>Ton profil</h2>
+        <h2>Profil + signaux</h2>
+
         <form id="generator-form" novalidate>
           <label>
             Prénom*
-            <input id="firstName" name="firstName" type="text" placeholder="Ex: Julien" maxlength="32" required />
+            <input id="firstName" name="firstName" type="text" maxlength="32" placeholder="Ex: Julien" required />
           </label>
 
           <label>
             Nom (optionnel)
-            <input id="lastName" name="lastName" type="text" placeholder="Ex: Martin" maxlength="32" />
+            <input id="lastName" name="lastName" type="text" maxlength="32" placeholder="Ex: Martin" />
           </label>
 
           <label>
             @ / pseudos (optionnel)
-            <input id="handles" name="handles" type="text" placeholder="Ex: @juliendev, twitch/julplay" maxlength="120" />
+            <input id="handles" name="handles" type="text" maxlength="140" placeholder="Ex: @juliendev, twitch/julplay" />
           </label>
 
           <label>
-            Mini bio / centres d'intérêt
-            <textarea id="bio" name="bio" rows="4" maxlength="220" placeholder="Ex: dev web, café, run club, crypto, gaming"></textarea>
+            Handle X/Twitter (optionnel)
+            <input id="xHandle" name="xHandle" type="text" maxlength="40" placeholder="Ex: @julien" />
           </label>
 
           <label>
-            Intensité
+            Bio courte
+            <textarea id="bio" name="bio" rows="3" maxlength="220" placeholder="Ex: dev web, run club, startup, café"></textarea>
+          </label>
+
+          <label>
+            Extraits sociaux (colle 3-10 posts/tweets/commentaires)
+            <textarea id="socialText" name="socialText" rows="4" maxlength="1500" placeholder="Colle ici du texte de tes posts pour une analyse plus fidèle"></textarea>
+          </label>
+
+          <fieldset class="quiz-box">
+            <legend>Quick quiz persona</legend>
+
+            <label>
+              Energie publique
+              <select id="qEnergy" name="qEnergy">
+                <option value="chill">Chill</option>
+                <option value="balanced" selected>Balanced</option>
+                <option value="turbo">Turbo</option>
+              </select>
+            </label>
+
+            <label>
+              Ego perçu
+              <select id="qEgo" name="qEgo">
+                <option value="low">Bas</option>
+                <option value="medium" selected>Moyen</option>
+                <option value="high">Très haut</option>
+              </select>
+            </label>
+
+            <label>
+              Rapport au drama
+              <select id="qDrama" name="qDrama">
+                <option value="avoid">J'évite</option>
+                <option value="neutral" selected>Ça dépend</option>
+                <option value="seek">J'adore</option>
+              </select>
+            </label>
+
+            <label>
+              Humour dominant
+              <select id="qHumor" name="qHumor">
+                <option value="dry">Sec</option>
+                <option value="meme" selected>Meme</option>
+                <option value="savage">Savage</option>
+              </select>
+            </label>
+
+            <label>
+              Ambition principale
+              <select id="qAmbition" name="qAmbition">
+                <option value="craft" selected>Créer du bon taf</option>
+                <option value="money">Faire de l'argent</option>
+                <option value="fame">Dominer les feeds</option>
+                <option value="chaos">Juste le chaos</option>
+              </select>
+            </label>
+
+            <label>
+              Archetype
+              <select id="qArchetype" name="qArchetype">
+                <option value="builder" selected>Builder</option>
+                <option value="performer">Performer</option>
+                <option value="analyst">Analyst</option>
+                <option value="troll">Troll</option>
+              </select>
+            </label>
+          </fieldset>
+
+          <label>
+            Intensité globale
             <select id="tone" name="tone">
-              <option value="playful">Playful (léger)</option>
-              <option value="roast" selected>Roast (piquant)</option>
-              <option value="chaos">Chaos (absurde)</option>
+              <option value="playful">Playful</option>
+              <option value="roast" selected>Roast</option>
+              <option value="chaos">Chaos</option>
             </select>
           </label>
 
+          <fieldset class="llm-box">
+            <legend>Mode LLM (optionnel)</legend>
+
+            <label class="inline-check">
+              <input id="useLlm" name="useLlm" type="checkbox" />
+              Activer l'analyse LLM pour des surnoms plus contextuels
+            </label>
+
+            <label>
+              Clé API OpenAI (non stockée)
+              <input id="apiKey" name="apiKey" type="password" autocomplete="off" placeholder="sk-..." />
+            </label>
+
+            <label>
+              Modèle
+              <input id="modelName" name="modelName" type="text" value="gpt-4o-mini" />
+            </label>
+          </fieldset>
+
           <div class="actions">
-            <button type="submit" id="generateBtn">Générer 5 nicknames</button>
-            <button type="button" id="surpriseBtn" class="ghost">Profil surprise</button>
+            <button id="generateBtn" type="submit">Générer 5 nicknames</button>
+            <button id="surpriseBtn" type="button" class="ghost">Profil surprise</button>
           </div>
+
           <p id="form-error" class="error" aria-live="polite"></p>
+          <p id="source-status" class="source-status" aria-live="polite"></p>
         </form>
       </article>
 
       <article class="panel output-panel">
         <div class="output-head">
           <h2>Résultat</h2>
-          <button type="button" id="copyAllBtn" class="ghost small">Copier le top 5</button>
+          <button id="copyAllBtn" type="button" class="ghost small">Copier le top 5</button>
         </div>
 
         <ol id="nickname-list" class="nickname-list" aria-live="polite"></ol>
 
+        <div class="analysis-box">
+          <p class="rally-label">Profile readout</p>
+          <ul id="analysisSignals" class="analysis-signals"></ul>
+        </div>
+
         <div class="rally-box">
           <p class="rally-label">Rally line</p>
-          <p id="rallyLine">Remplis le formulaire et lance la machine.</p>
+          <p id="rallyLine">Remplis le formulaire pour lancer l'analyse.</p>
         </div>
 
         <p class="fineprint">
-          Outil satirique. Pas de données stockées: tout est généré côté navigateur.
+          Tout est généré côté navigateur. Si le mode LLM est activé, seul ton prompt est envoyé à l'API.
         </p>
       </article>
     </section>
