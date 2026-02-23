@@ -15,6 +15,13 @@ const qAmbitionEl = document.getElementById("qAmbition");
 const qArchetypeEl = document.getElementById("qArchetype");
 
 const useLlmEl = document.getElementById("useLlm");
+const llmProviderEl = document.getElementById("llmProvider");
+const localEndpointEl = document.getElementById("localEndpoint");
+const localModelNameEl = document.getElementById("localModelName");
+const openAiKeyWrapEl = document.getElementById("openAiKeyWrap");
+const openAiModelWrapEl = document.getElementById("openAiModelWrap");
+const localEndpointWrapEl = document.getElementById("localEndpointWrap");
+const localModelWrapEl = document.getElementById("localModelWrap");
 const apiKeyEl = document.getElementById("apiKey");
 const modelNameEl = document.getElementById("modelName");
 
@@ -504,15 +511,11 @@ async function fetchWithTimeout(url, options, timeoutMs = 22000) {
   }
 }
 
-async function generateWithLlm(profile, enrichment, localEntries) {
-  const apiKey = apiKeyEl.value.trim();
-  const model = modelNameEl.value.trim() || "gpt-4o-mini";
+const llmSystemPrompt =
+  "You generate satirical Trump-style campaign nicknames. Return strict JSON only with keys analysis, nicknames, rally_line. analysis must include persona and signals array. nicknames must contain exactly 5 items with name, why, power (0-99). Avoid hateful slurs.";
 
-  if (!apiKey) {
-    throw new Error("Clé API manquante pour le mode LLM.");
-  }
-
-  const payload = {
+function buildLlmPayload(profile, enrichment) {
+  return {
     profile: {
       firstName: profile.firstName,
       lastName: profile.lastName,
@@ -526,43 +529,10 @@ async function generateWithLlm(profile, enrichment, localEntries) {
     inferredSignals: enrichment.signals,
     detectedTopics: enrichment.topics.map((topic) => topic.name),
   };
+}
 
-  const response = await fetchWithTimeout("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model,
-      temperature: 1,
-      response_format: { type: "json_object" },
-      messages: [
-        {
-          role: "system",
-          content:
-            "You generate satirical Trump-style campaign nicknames. Return strict JSON only with keys analysis, nicknames, rally_line. analysis must include persona and signals array. nicknames must contain exactly 5 items with name, why, power (0-99). Avoid hateful slurs.",
-        },
-        {
-          role: "user",
-          content: JSON.stringify(payload),
-        },
-      ],
-    }),
-  });
-
-  if (!response.ok) {
-    const details = await response.text();
-    throw new Error(`LLM error ${response.status}: ${details.slice(0, 140)}`);
-  }
-
-  const data = await response.json();
-  const rawText = data?.choices?.[0]?.message?.content || "";
-  const parsed = extractJson(rawText);
-  if (!parsed) throw new Error("Réponse LLM invalide.");
-
+function parseLlmPack(parsed, localEntries) {
   const entries = mapLlmResult(parsed, localEntries);
-
   const llmSignals = [];
   if (parsed?.analysis?.persona) llmSignals.push(`Persona IA: ${parsed.analysis.persona}`);
   if (Array.isArray(parsed?.analysis?.signals)) {
@@ -574,6 +544,75 @@ async function generateWithLlm(profile, enrichment, localEntries) {
     llmSignals,
     rallyLine: typeof parsed?.rally_line === "string" ? parsed.rally_line : null,
   };
+}
+
+async function generateWithOpenAi(profile, enrichment, localEntries) {
+  const apiKey = apiKeyEl.value.trim();
+  const model = modelNameEl.value.trim() || "gpt-4o-mini";
+  if (!apiKey) throw new Error("Clé API manquante pour OpenAI.");
+
+  const payload = buildLlmPayload(profile, enrichment);
+  const response = await fetchWithTimeout("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model,
+      temperature: 1,
+      response_format: { type: "json_object" },
+      messages: [
+        { role: "system", content: llmSystemPrompt },
+        { role: "user", content: JSON.stringify(payload) },
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    const details = await response.text();
+    throw new Error(`OpenAI ${response.status}: ${details.slice(0, 140)}`);
+  }
+
+  const data = await response.json();
+  const rawText = data?.choices?.[0]?.message?.content || "";
+  const parsed = extractJson(rawText);
+  if (!parsed) throw new Error("Réponse OpenAI invalide.");
+  return parseLlmPack(parsed, localEntries);
+}
+
+async function generateWithOllama(profile, enrichment, localEntries) {
+  const endpoint = (localEndpointEl.value.trim() || "http://127.0.0.1:11434").replace(/\/+$/, "");
+  const model = localModelNameEl.value.trim() || "qwen2.5:3b";
+  const payload = buildLlmPayload(profile, enrichment);
+
+  const response = await fetchWithTimeout(`${endpoint}/api/generate`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model,
+      stream: false,
+      format: "json",
+      options: { temperature: 1 },
+      prompt:
+        `${llmSystemPrompt}\n` +
+        "Output JSON with {analysis:{persona:string,signals:string[]},nicknames:[{name,why,power}],rally_line:string}.\n" +
+        `Input payload:\n${JSON.stringify(payload)}`,
+    }),
+  });
+
+  if (!response.ok) {
+    const details = await response.text();
+    throw new Error(`Ollama ${response.status}: ${details.slice(0, 160)}`);
+  }
+
+  const data = await response.json();
+  const rawText = data?.response || "";
+  const parsed = extractJson(rawText);
+  if (!parsed) throw new Error("Réponse Ollama invalide.");
+  return parseLlmPack(parsed, localEntries);
 }
 
 function collectProfile() {
@@ -594,6 +633,16 @@ function collectProfile() {
       archetype: qArchetypeEl.value,
     },
   };
+}
+
+function updateLlmProviderUi() {
+  const provider = llmProviderEl.value;
+  const localMode = provider === "local";
+
+  localEndpointWrapEl.classList.toggle("hidden", !localMode);
+  localModelWrapEl.classList.toggle("hidden", !localMode);
+  openAiKeyWrapEl.classList.toggle("hidden", localMode);
+  openAiModelWrapEl.classList.toggle("hidden", localMode);
 }
 
 async function runGeneration() {
@@ -622,13 +671,21 @@ async function runGeneration() {
 
     if (useLlmEl.checked) {
       try {
-        const llm = await generateWithLlm(profile, enrichment, entries);
+        const llm =
+          llmProviderEl.value === "local"
+            ? await generateWithOllama(profile, enrichment, entries)
+            : await generateWithOpenAi(profile, enrichment, entries);
         entries = llm.entries;
         signals = [...signals, ...llm.llmSignals];
         rallyOverride = llm.rallyLine;
-        sources.push("LLM");
+        sources.push(llmProviderEl.value === "local" ? "LLM local (Ollama)" : "LLM OpenAI");
       } catch (llmError) {
+        const hint =
+          llmProviderEl.value === "local"
+            ? "Vérifie que Ollama tourne (ollama serve) et que le modèle existe."
+            : "Vérifie la clé API OpenAI.";
         signals.push(`LLM indisponible: ${llmError.message}`);
+        signals.push(hint);
       }
     }
 
@@ -645,6 +702,8 @@ form.addEventListener("submit", async (event) => {
   event.preventDefault();
   await runGeneration();
 });
+
+llmProviderEl.addEventListener("change", updateLlmProviderUi);
 
 surpriseBtn.addEventListener("click", async () => {
   const sample = pick(surpriseProfiles);
@@ -672,4 +731,5 @@ copyAllBtn.addEventListener("click", () => {
   copyText(nicks.map((nick, idx) => `${idx + 1}. ${nick}`).join("\n"));
 });
 
+updateLlmProviderUi();
 surpriseBtn.click();

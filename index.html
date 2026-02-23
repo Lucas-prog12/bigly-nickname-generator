@@ -133,19 +133,42 @@
             <legend>Mode LLM (optionnel)</legend>
 
             <label class="inline-check">
-              <input id="useLlm" name="useLlm" type="checkbox" />
+              <input id="useLlm" name="useLlm" type="checkbox" checked />
               Activer l'analyse LLM pour des surnoms plus contextuels
             </label>
 
             <label>
+              Provider
+              <select id="llmProvider" name="llmProvider">
+                <option value="local" selected>Local (Ollama)</option>
+                <option value="openai">OpenAI API</option>
+              </select>
+            </label>
+
+            <label id="localEndpointWrap">
+              Endpoint local
+              <input id="localEndpoint" name="localEndpoint" type="text" value="http://127.0.0.1:11434" />
+            </label>
+
+            <label id="localModelWrap">
+              Modèle local
+              <input id="localModelName" name="localModelName" type="text" value="qwen2.5:3b" />
+            </label>
+
+            <label id="openAiKeyWrap" class="hidden">
               Clé API OpenAI (non stockée)
               <input id="apiKey" name="apiKey" type="password" autocomplete="off" placeholder="sk-..." />
             </label>
 
-            <label>
-              Modèle
+            <label id="openAiModelWrap" class="hidden">
+              Modèle OpenAI
               <input id="modelName" name="modelName" type="text" value="gpt-4o-mini" />
             </label>
+
+            <p class="llm-help">
+              Local: démarre Ollama, puis laisse l'endpoint par défaut.
+              OpenAI: nécessite une clé API.
+            </p>
           </fieldset>
 
           <div class="actions">

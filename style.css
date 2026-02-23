@@ -193,6 +193,16 @@ textarea {
   width: auto;
 }
 
+.hidden {
+  display: none;
+}
+
+.llm-help {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #4f5c74;
+}
+
 .actions {
   display: flex;
   gap: 0.55rem;
